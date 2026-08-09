@@ -28,6 +28,17 @@ import * as THREE from 'three'
  */
 export function boxUV(geo: THREE.BufferGeometry, w: number, h: number, d: number, s = 0.5): void {
   const uv = geo.attributes.uv as THREE.BufferAttribute
+  // Индексация `f * 4 + k` ниже опирается на раскладку BoxGeometry без
+  // сегментов: ровно четыре вершины на грань. У сегментированной коробки
+  // вершин больше, арифметика съезжает на чужие грани, и развёртка портится
+  // МОЛЧА - поэтому не чиним, а честно падаем.
+  if (uv.count !== 24) {
+    throw new Error(
+      `boxUV: у геометрии ${uv.count} вершин UV вместо 24. ` +
+        'Развёртка рассчитана на BoxGeometry с сегментами 1x1x1; ' +
+        'сегментированную коробку она бы искалечила молча.',
+    )
+  }
   const dims: [number, number][] = [
     [d, h],
     [d, h],
