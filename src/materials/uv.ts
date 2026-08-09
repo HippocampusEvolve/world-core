@@ -72,6 +72,15 @@ export function planeUV(geo: THREE.BufferGeometry, w: number, h: number, s = 0.5
  *
  * Нужно ровно там, где эталон правил UV вручную у каждого бревна и полена.
  * `radius` берётся средний, если у цилиндра разные торцы.
+ *
+ * Крышки закрытого цилиндра разворачивать по обхвату нельзя: их штатные UV
+ * идут веером от центра, и «обхватный» множитель растягивает рисунок кольцами.
+ * Поэтому вершины крышек - те, у кого нормаль смотрит вдоль оси, |ny| > 0.9, -
+ * получают планарную развёртку по своим x/z в метрах с тем же `s`. Так уже
+ * работает эта функция в Winter Tower; поведение перенесено оттуда.
+ *
+ * Считать до `rotateX`/`rotateZ` самой геометрии: и метраж боковины, и отбор
+ * крышек по нормали держатся на том, что ось цилиндра - его собственная Y.
  */
 export function cylinderUV(
   geo: THREE.BufferGeometry,
@@ -80,10 +89,17 @@ export function cylinderUV(
   s = 0.5,
 ): void {
   const uv = geo.attributes.uv as THREE.BufferAttribute
+  const pos = geo.attributes.position as THREE.BufferAttribute
+  const nor = geo.attributes.normal as THREE.BufferAttribute
   const du = 2 * Math.PI * radius * s
   const dv = height * s
   for (let i = 0; i < uv.count; i++) {
-    uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv)
+    if (Math.abs(nor.getY(i)) > 0.9) {
+      // Крышка: плоская проекция по x/z, тот же масштаб «тайлов на метр».
+      uv.setXY(i, pos.getX(i) * s, pos.getZ(i) * s)
+    } else {
+      uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv)
+    }
   }
   uv.needsUpdate = true
 }
