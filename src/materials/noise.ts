@@ -100,9 +100,10 @@ export function ridge(x: number, y: number, px: number, py: number, oct: number,
   return 1 - Math.abs(2 * fbm(x, y, px, py, oct, s) - 1)
 }
 
-/** Результат клеточного шума. Один объект на все вызовы - без мусора в куче. */
+/** Результат клеточного шума. По умолчанию один объект на все вызовы - без мусора в куче. */
 export type Worley = { f1: number; f2: number; id: number }
 
+/** Общий результат по умолчанию: живёт до следующего вызова `worley` без `out`. */
 const _w: Worley = { f1: 0, f2: 0, id: 0 }
 
 /**
@@ -110,11 +111,24 @@ const _w: Worley = { f1: 0, f2: 0, id: 0 }
  * `id` - хеш ячейки (по нему камни красятся в разные тона). Разность `f2 - f1`
  * даёт шов между ячейками - из неё и растёт бутовая кладка.
  *
+ * ОСТОРОЖНО: без `out` возвращается один общий объект, и результат живёт
+ * только до следующего вызова `worley`. Два результата, нужных одновременно,
+ * заалиасятся - второй вызов молча перепишет первый. Заводить литерал на
+ * каждый пиксель нельзя (мусор в горячем цикле выпечки), поэтому лекарство -
+ * передать вторым результатом свой `out` и читать из него.
+ *
  * Точки живут в решётке с периодом `px`/`py`, поэтому шум тайлится по тому же
  * договору. Указывать нецелый множитель бессмысленно вдвойне: ячейки не только
  * порвутся на стыке, но и растянутся в последнем ряду.
  */
-export function worley(x: number, y: number, px: number, py: number, seed: number): Worley {
+export function worley(
+  x: number,
+  y: number,
+  px: number,
+  py: number,
+  seed: number,
+  out: Worley = _w,
+): Worley {
   const xi = Math.floor(x)
   const yi = Math.floor(y)
   let f1 = 9
@@ -138,8 +152,8 @@ export function worley(x: number, y: number, px: number, py: number, seed: numbe
       }
     }
   }
-  _w.f1 = f1
-  _w.f2 = f2
-  _w.id = id
-  return _w
+  out.f1 = f1
+  out.f2 = f2
+  out.id = id
+  return out
 }

@@ -43,7 +43,7 @@ export declare function vnoise(x: number, y: number, px: number, py: number, s: 
 export declare function fbm(x: number, y: number, px: number, py: number, oct: number, s: number, gain?: number): number;
 /** Гребень: складка fbm вокруг середины. Даёт хребты коры и трещины. */
 export declare function ridge(x: number, y: number, px: number, py: number, oct: number, s: number): number;
-/** Результат клеточного шума. Один объект на все вызовы - без мусора в куче. */
+/** Результат клеточного шума. По умолчанию один объект на все вызовы - без мусора в куче. */
 export type Worley = {
     f1: number;
     f2: number;
@@ -54,8 +54,14 @@ export type Worley = {
  * `id` - хеш ячейки (по нему камни красятся в разные тона). Разность `f2 - f1`
  * даёт шов между ячейками - из неё и растёт бутовая кладка.
  *
+ * ОСТОРОЖНО: без `out` возвращается один общий объект, и результат живёт
+ * только до следующего вызова `worley`. Два результата, нужных одновременно,
+ * заалиасятся - второй вызов молча перепишет первый. Заводить литерал на
+ * каждый пиксель нельзя (мусор в горячем цикле выпечки), поэтому лекарство -
+ * передать вторым результатом свой `out` и читать из него.
+ *
  * Точки живут в решётке с периодом `px`/`py`, поэтому шум тайлится по тому же
  * договору. Указывать нецелый множитель бессмысленно вдвойне: ячейки не только
  * порвутся на стыке, но и растянутся в последнем ряду.
  */
-export declare function worley(x: number, y: number, px: number, py: number, seed: number): Worley;
+export declare function worley(x: number, y: number, px: number, py: number, seed: number, out?: Worley): Worley;
