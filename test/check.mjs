@@ -87,6 +87,9 @@ function seamExact(recipe) {
   const S = recipe.size
   const p = { r: 0, g: 0, b: 0, h: 0.5, rough: 0.85, metal: -1 }
   const at = (x, y) => {
+    // Сброс зеркалит bake(): пиксель начинается с нулевого цвета. Разойдись
+    // эти два места - замер шва мерил бы не ту функцию, которую печёт выпечка.
+    p.r = p.g = p.b = 0
     p.h = 0.5
     p.rough = 0.85
     p.metal = -1
