@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Общее ядро миров find-the-end.fun: процедурные материалы и контроллер от первого лица.",
   "type": "module",
+  "sideEffects": false,
   "license": "MIT",
   "repository": {
     "type": "git",
