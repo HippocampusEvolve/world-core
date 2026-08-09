@@ -1,0 +1,117 @@
+/**
+ * uv.ts — UV в метрах.
+ *
+ * Половина убедительности процедурного материала держится не на самом рисунке,
+ * а на его РАЗМЕРЕ. Кирпич должен быть кирпичом на любой стене: и на печной
+ * щеке в полметра, и на дымоходе в три. Развёртка по умолчанию этого не даёт -
+ * `BoxGeometry` кладёт на каждую грань UV от 0 до 1 независимо от габарита,
+ * поэтому на маленькой детали кладка выходит мелкой крошкой, а на большой -
+ * блоками по полстены.
+ *
+ * Лечение простое: UV умножается на РАЗМЕР ГРАНИ В МЕТРАХ и на общий масштаб
+ * `s` - число тайлов на метр. Один и тот же материал с одним и тем же `s`
+ * ложится по всей постройке одинаково, и подгонять `repeat` руками для каждой
+ * детали больше не нужно.
+ *
+ * Отсюда же требование к самим картам: они обязаны стыковаться сами с собой.
+ * Как только UV пошло за единицу, шов на стыке тайла становится видимой полосой
+ * поперёк стены - см. договор о периоде в `noise.ts` и замер шва в проверке.
+ */
+
+import * as THREE from 'three'
+
+/**
+ * Развернуть коробку по метражу. Порядок граней у `BoxGeometry`:
+ * +X, −X, +Y, −Y, +Z, −Z; у каждой свои две меры из (w, h, d).
+ *
+ * `s` - тайлов на метр. 0.5 значит «один тайл на два метра».
+ */
+export function boxUV(geo: THREE.BufferGeometry, w: number, h: number, d: number, s = 0.5): void {
+  const uv = geo.attributes.uv as THREE.BufferAttribute
+  const dims: [number, number][] = [
+    [d, h],
+    [d, h],
+    [w, d],
+    [w, d],
+    [w, h],
+    [w, h],
+  ]
+  for (let f = 0; f < 6; f++) {
+    const du = dims[f][0] * s
+    const dv = dims[f][1] * s
+    for (let k = 0; k < 4; k++) {
+      const i = f * 4 + k
+      uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv)
+    }
+  }
+  uv.needsUpdate = true
+}
+
+/** То же для плоскости: пол, потолок, накладка на стену. */
+export function planeUV(geo: THREE.BufferGeometry, w: number, h: number, s = 0.5): void {
+  const uv = geo.attributes.uv as THREE.BufferAttribute
+  for (let i = 0; i < uv.count; i++) {
+    uv.setXY(i, uv.getX(i) * w * s, uv.getY(i) * h * s)
+  }
+  uv.needsUpdate = true
+}
+
+/**
+ * То же для цилиндра: боковую поверхность разворачиваем по обхвату и высоте.
+ *
+ * Нужно ровно там, где эталон правил UV вручную у каждого бревна и полена.
+ * `radius` берётся средний, если у цилиндра разные торцы.
+ */
+export function cylinderUV(
+  geo: THREE.BufferGeometry,
+  radius: number,
+  height: number,
+  s = 0.5,
+): void {
+  const uv = geo.attributes.uv as THREE.BufferAttribute
+  const du = 2 * Math.PI * radius * s
+  const dv = height * s
+  for (let i = 0; i < uv.count; i++) {
+    uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv)
+  }
+  uv.needsUpdate = true
+}
+
+/** Точка в пространстве как тройка чисел. */
+export type P3 = [number, number, number]
+
+const len = (p: P3, q: P3): number => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2])
+
+/**
+ * Произвольный четырёхугольник с UV в метрах - для скошенных граней, которым
+ * коробка не годится: дымосборник, откос кровли, клин на изломе марша.
+ *
+ * Вершины идут по кругу (a, b, c, d). Меры берутся по РЁБРАМ, а не по габариту:
+ * у скошенной грани габарит врёт тем сильнее, чем круче скос.
+ *
+ * Нормали считаются из порядка вершин, поэтому обход должен быть против часовой
+ * стрелки со стороны, которую видно. Перепутанный обход даёт не «тёмную грань»,
+ * а грань, которую видно насквозь при `side: FrontSide` - и ищут это обычно в
+ * материале.
+ */
+export function quadGeometry(a: P3, b: P3, c: P3, d: P3, s = 0.5): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry()
+  g.setAttribute(
+    'position',
+    new THREE.BufferAttribute(
+      new Float32Array([
+        a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2],
+        a[0], a[1], a[2], c[0], c[1], c[2], d[0], d[1], d[2],
+      ]),
+      3,
+    ),
+  )
+  const uw = len(a, b) * s
+  const uh = len(b, c) * s
+  g.setAttribute(
+    'uv',
+    new THREE.BufferAttribute(new Float32Array([0, 0, uw, 0, uw, uh, 0, 0, uw, uh, 0, uh]), 2),
+  )
+  g.computeVertexNormals()
+  return g
+}

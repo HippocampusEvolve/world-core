@@ -1,0 +1,145 @@
+/**
+ * noise.ts — периодический шум, из которого растут все материалы.
+ *
+ * Здесь нет ни одного нового алгоритма: значение-шум, fbm, гребень и клеточный
+ * шум - те же, что в эталоне `demo/cabin-fireplace.html`. Единственное, что
+ * добавлено, - явно названный ДОГОВОР О ПЕРИОДЕ, потому что на нём эталон и
+ * спотыкался.
+ *
+ * ## Договор о периоде
+ *
+ * Каждая функция принимает не только координату, но и период решётки (`px`,
+ * `py`). Узлы решётки берутся по модулю периода, поэтому шум повторяется через
+ * `px` по x и через `py` по y. Карта размером в одну ячейку UV (u, v ∈ [0, 1))
+ * стыкуется сама с собой без шва РОВНО ТОГДА, когда для каждого вызова
+ *
+ *     x = u * A,  px = A,  A - целое
+ *     y = v * B,  py = B,  B - целое
+ *
+ * То есть множитель координаты и период должны совпадать и быть целыми. Стоит
+ * написать `fbm(u * 5, v * 1.4, 5, 1, ...)` - и по вертикали карта проезжает
+ * 1.4 периода вместо одного: на стыке тайлов встаёт видимая полоса.
+ *
+ * В эталоне таких вызовов было большинство, и это не бросалось в глаза: в
+ * тёмной хижине при свете очага шов на четырёхметровой стене читается как ещё
+ * одно пятно копоти. Ловится он только счётом - см. `test/check.mjs`, замер
+ * «шов против внутреннего перепада».
+ *
+ * То же касается синусов и клеточных индексов: `Math.sin(u * 3.4 * 2π)` за
+ * оборот набирает 3.4 периода, а `hash2(Math.floor(u * 4), ...)` на самом краю
+ * даёт индекс 4 вместо 0. Обе вещи чинятся тут же, в вызывающем коде: целое
+ * число периодов и `wrapi` вокруг индекса ячейки.
+ */
+
+/** Целочисленный хеш в [0, 1). Тот же, что в эталоне: три раунда xorshift-mul. */
+export function hash2(x: number, y: number, s: number): number {
+  let h = Math.imul(x | 0, 0x27d4eb2d) ^ Math.imul(y | 0, 0x165667b1) ^ Math.imul(s | 0, 0x9e3779b1)
+  h ^= h >>> 15
+  h = Math.imul(h, 0x2545f491)
+  h ^= h >>> 13
+  h = Math.imul(h, 0x27d4eb2d)
+  h ^= h >>> 16
+  return (h >>> 0) / 4294967296
+}
+
+/** Остаток по модулю, всегда неотрицательный. Ею и заворачивается решётка. */
+export function wrapi(a: number, n: number): number {
+  a %= n
+  return a < 0 ? a + n : a
+}
+
+/** Значение-шум с плавным (smoothstep) переходом между узлами решётки. */
+export function vnoise(x: number, y: number, px: number, py: number, s: number): number {
+  const xi = Math.floor(x)
+  const yi = Math.floor(y)
+  const fx = x - xi
+  const fy = y - yi
+  const u = fx * fx * (3 - 2 * fx)
+  const v = fy * fy * (3 - 2 * fy)
+  const x0 = wrapi(xi, px)
+  const x1 = wrapi(xi + 1, px)
+  const y0 = wrapi(yi, py)
+  const y1 = wrapi(yi + 1, py)
+  const a = hash2(x0, y0, s)
+  const b = hash2(x1, y0, s)
+  const c = hash2(x0, y1, s)
+  const d = hash2(x1, y1, s)
+  const t = a + (b - a) * u
+  const q = c + (d - c) * u
+  return t + (q - t) * v
+}
+
+/**
+ * Сумма октав. Период удваивается вместе с частотой, поэтому периодичность
+ * держится на всех октавах сразу - но только если `px === x/u` (см. договор).
+ */
+export function fbm(
+  x: number,
+  y: number,
+  px: number,
+  py: number,
+  oct: number,
+  s: number,
+  gain = 0.5,
+): number {
+  let amp = 1
+  let f = 1
+  let sum = 0
+  let nrm = 0
+  for (let i = 0; i < oct; i++) {
+    sum += amp * vnoise(x * f, y * f, px * f, py * f, s + i * 7919)
+    nrm += amp
+    amp *= gain
+    f *= 2
+  }
+  return sum / nrm
+}
+
+/** Гребень: складка fbm вокруг середины. Даёт хребты коры и трещины. */
+export function ridge(x: number, y: number, px: number, py: number, oct: number, s: number): number {
+  return 1 - Math.abs(2 * fbm(x, y, px, py, oct, s) - 1)
+}
+
+/** Результат клеточного шума. Один объект на все вызовы - без мусора в куче. */
+export type Worley = { f1: number; f2: number; id: number }
+
+const _w: Worley = { f1: 0, f2: 0, id: 0 }
+
+/**
+ * Клеточный шум. `f1` - расстояние до ближайшей точки, `f2` - до второй,
+ * `id` - хеш ячейки (по нему камни красятся в разные тона). Разность `f2 - f1`
+ * даёт шов между ячейками - из неё и растёт бутовая кладка.
+ *
+ * Точки живут в решётке с периодом `px`/`py`, поэтому шум тайлится по тому же
+ * договору. Указывать нецелый множитель бессмысленно вдвойне: ячейки не только
+ * порвутся на стыке, но и растянутся в последнем ряду.
+ */
+export function worley(x: number, y: number, px: number, py: number, seed: number): Worley {
+  const xi = Math.floor(x)
+  const yi = Math.floor(y)
+  let f1 = 9
+  let f2 = 9
+  let id = 0
+  for (let j = -1; j <= 1; j++) {
+    for (let i = -1; i <= 1; i++) {
+      const cx = xi + i
+      const cy = yi + j
+      const wx = wrapi(cx, px)
+      const wy = wrapi(cy, py)
+      const dx = cx + 0.12 + hash2(wx, wy, seed) * 0.76 - x
+      const dy = cy + 0.12 + hash2(wx, wy, seed + 13) * 0.76 - y
+      const d = Math.sqrt(dx * dx + dy * dy)
+      if (d < f1) {
+        f2 = f1
+        f1 = d
+        id = hash2(wx, wy, seed + 29)
+      } else if (d < f2) {
+        f2 = d
+      }
+    }
+  }
+  _w.f1 = f1
+  _w.f2 = f2
+  _w.id = id
+  return _w
+}

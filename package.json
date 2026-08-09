@@ -1,0 +1,39 @@
+{
+  "name": "world-core",
+  "version": "0.1.0",
+  "description": "Общее ядро миров find-the-end.fun: процедурные материалы и контроллер от первого лица.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HippocampusEvolve/world-core.git"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./materials": {
+      "types": "./dist/materials/index.d.ts",
+      "default": "./dist/materials/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run build && node test/check.mjs"
+  },
+  "peerDependencies": {
+    "three": ">=0.170"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.1",
+    "three": "^0.185.1",
+    "typescript": "^5.9.3"
+  }
+}

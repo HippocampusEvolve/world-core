@@ -1,0 +1,157 @@
+/**
+ * bake.ts — выпечка набора карт. НИ ОДНОГО обращения к DOM.
+ *
+ * В эталоне генератор писал сразу в `ImageData` канвы, и посчитать что-либо про
+ * его результат можно было только в браузере. Здесь слой разрезан надвое:
+ *
+ *   * `bake()` - чистая арифметика, на выходе байтовые массивы;
+ *   * `textures.ts` - канва и three, нужны только чтобы отдать это видеокарте.
+ *
+ * Разрез не косметический. Правило проекта - «геометрию и материал проверяем
+ * счётом, браузером последним», и оно выполнимо, только когда карты считаются
+ * там же, где считается проверка: на Node, без окна. Ровно это и поймало у
+ * камина мусор в канале металла и почти чёрную занятость - замером самих карт,
+ * а не разглядыванием кадра.
+ *
+ * ## Пиксель
+ *
+ * Генератор получает координату, размер и объект `Px`, который заполняет. Объект
+ * ОДИН на всю карту и переиспользуется: 262144 вызова с новым литералом на
+ * каждый - это мусор, который собирается прямо посреди загрузки мира.
+ *
+ * Поле `metal` начинается со значения −1 и означает «металла тут нет вовсе».
+ * Генератор, который его не трогает, карты металла не получает - и это важнее,
+ * чем кажется: пустая (нулевая) карта металла и ОТСУТСТВУЮЩАЯ карта металла в
+ * three ведут себя одинаково только до тех пор, пока к материалу не подмешали
+ * `metalness`. У камина это стоило пластикового блика на камне.
+ */
+
+/** Что генератор говорит про пиксель. Заполняется на месте, не создаётся заново. */
+export type Px = {
+  /** Цвет, 0..255. */
+  r: number
+  g: number
+  b: number
+  /** Высота для карты нормалей, 0..1. Абсолютное значение не важно, важен перепад. */
+  h: number
+  /** Шероховатость, 0..1. */
+  rough: number
+  /** Металличность, 0..1. Значение −1 (по умолчанию) означает «металла нет». */
+  metal: number
+}
+
+/** Генератор материала: пишет в `p` всё, что знает про точку (x, y) карты S×S. */
+export type Generator = (x: number, y: number, S: number, p: Px) => void
+
+/** Выпеченный набор карт. Все байтовые массивы - RGBA, длиной size²·4. */
+export type Baked = {
+  size: number
+  /** Базовый цвет. Читается как sRGB. */
+  albedo: Uint8ClampedArray
+  /** Карта нормалей в касательном базисе. Читается как линейные данные. */
+  normal: Uint8ClampedArray
+  /** Шероховатость. Три канала одинаковы, three читает зелёный. */
+  rough: Uint8ClampedArray
+  /** Металличность, или `null`, если генератор про металл ничего не сказал. */
+  metal: Uint8ClampedArray | null
+  /** Сырая высота до перевода в нормаль. Нужна проверке, в игру не едет. */
+  height: Float32Array
+}
+
+const cl255 = (v: number): number => (v < 0 ? 0 : v > 255 ? 255 : v)
+const cl01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v)
+
+/** Остаток по модулю, всегда неотрицательный. Тот же, что в `noise.ts`. */
+function wrapi(a: number, n: number): number {
+  a %= n
+  return a < 0 ? a + n : a
+}
+
+/**
+ * Карта нормалей из карты высот, конечными разностями.
+ *
+ * Соседи берутся ПО КОЛЬЦУ (`wrapi`), а не зажимаются на краю. Иначе последний
+ * ряд пикселей получает нормаль от самого себя, и на стыке тайлов вдоль всей
+ * кромки идёт полоса плоского освещения - шов, которого нет в цвете и который
+ * поэтому ищут не там.
+ *
+ * Множитель `S / 128` держит рельеф одинаковым при разном размере карты: без
+ * него та же поверхность на 512 выглядит вчетверо глаже, чем на 128.
+ */
+export function normalFromHeight(H: Float32Array, S: number, strength: number): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(S * S * 4)
+  const at = (x: number, y: number): number => H[wrapi(y, S) * S + wrapi(x, S)]
+  let i = 0
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++, i++) {
+      const dx = (at(x + 1, y) - at(x - 1, y)) * strength * S / 128
+      const dy = (at(x, y + 1) - at(x, y - 1)) * strength * S / 128
+      const l = Math.sqrt(dx * dx + dy * dy + 1)
+      const o = i * 4
+      out[o] = (-dx / l * 0.5 + 0.5) * 255
+      out[o + 1] = (dy / l * 0.5 + 0.5) * 255
+      out[o + 2] = (1 / l * 0.5 + 0.5) * 255
+      out[o + 3] = 255
+    }
+  }
+  return out
+}
+
+/** Разложить значение 0..1 по трём каналам серой карты. */
+function grayBytes(A: Float32Array, S: number): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(S * S * 4)
+  for (let i = 0; i < S * S; i++) {
+    const v = A[i] * 255
+    const o = i * 4
+    out[o] = out[o + 1] = out[o + 2] = v
+    out[o + 3] = 255
+  }
+  return out
+}
+
+/**
+ * Посчитать набор карт для генератора.
+ *
+ * `normalStrength` - крутизна рельефа в карте нормалей. Число подбирается на
+ * глаз один раз и живёт рядом с генератором, а не задаётся миром: у коры и у
+ * ткани разная глубина по самой их природе.
+ */
+export function bake(gen: Generator, size: number, normalStrength = 2.2): Baked {
+  const albedo = new Uint8ClampedArray(size * size * 4)
+  const H = new Float32Array(size * size)
+  const R = new Float32Array(size * size)
+  const M = new Float32Array(size * size)
+  let hasMetal = false
+  let i = 0
+
+  const p: Px = { r: 0, g: 0, b: 0, h: 0.5, rough: 0.85, metal: -1 }
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++, i++) {
+      p.h = 0.5
+      p.rough = 0.85
+      p.metal = -1
+      gen(x, y, size, p)
+      const o = i * 4
+      albedo[o] = cl255(p.r)
+      albedo[o + 1] = cl255(p.g)
+      albedo[o + 2] = cl255(p.b)
+      albedo[o + 3] = 255
+      H[i] = p.h
+      R[i] = cl01(p.rough)
+      if (p.metal >= 0) {
+        M[i] = cl01(p.metal)
+        hasMetal = true
+      }
+    }
+  }
+
+  return {
+    size,
+    albedo,
+    normal: normalFromHeight(H, size, normalStrength),
+    rough: grayBytes(R, size),
+    metal: hasMetal ? grayBytes(M, size) : null,
+    height: H,
+  }
+}
