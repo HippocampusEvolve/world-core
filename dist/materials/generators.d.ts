@@ -26,6 +26,7 @@ export declare const bark: Generator;
 export declare const logEnd: Generator;
 export declare const cloth: Generator;
 export declare const iron: Generator;
+export declare function ashlar(warm?: boolean): Generator;
 /** В какие стороны карта стыкуется сама с собой. */
 export type Tiling = 'both' | 'u' | 'v' | 'none';
 export type Recipe = {

@@ -16,7 +16,7 @@
 export { hash2, wrapi, vnoise, fbm, ridge, worley } from './noise.js';
 export { cl, cl01, ss, mix, add } from './shape.js';
 export { bake, normalFromHeight } from './bake.js';
-export { log, rubble, hearth, firebrick, floor, beam, bark, logEnd, cloth, iron, RECIPES, recipe, } from './generators.js';
+export { log, rubble, ashlar, hearth, firebrick, floor, beam, bark, logEnd, cloth, iron, RECIPES, recipe, } from './generators.js';
 export { makeSet, toTextures, material, disposeSet, } from './textures.js';
 export { boxUV, planeUV, cylinderUV, quadGeometry } from './uv.js';
 //# sourceMappingURL=index.js.map

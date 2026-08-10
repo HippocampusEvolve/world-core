@@ -20,6 +20,7 @@ export { bake, normalFromHeight, type Baked, type Generator, type Px } from './b
 export {
   log,
   rubble,
+  ashlar,
   hearth,
   firebrick,
   floor,
