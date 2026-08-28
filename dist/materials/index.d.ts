@@ -16,6 +16,7 @@
 export { hash2, wrapi, vnoise, fbm, ridge, worley, type Worley } from './noise.js';
 export { cl, cl01, ss, mix, add, type RGB } from './shape.js';
 export { bake, normalFromHeight, type Baked, type Generator, type Px } from './bake.js';
-export { log, rubble, ashlar, hearth, firebrick, floor, beam, bark, logEnd, cloth, iron, RECIPES, recipe, type Recipe, type Tiling, } from './generators.js';
+export { log, rubble, ashlar, hearth, firebrick, floor, beam, bark, logEnd, cloth, iron, wool, braid, leather, paper, split, RECIPES, recipe, type Recipe, type Tiling, } from './generators.js';
 export { makeSet, toTextures, material, disposeSet, type TextureSet, type SetOptions, type MaterialOptions, } from './textures.js';
-export { boxUV, planeUV, cylinderUV, quadGeometry, type P3 } from './uv.js';
+export { boxUV, planeUV, cylinderUV, discUV, quadGeometry, type P3, type Along } from './uv.js';
+export { cachedSet, cachedSets, disposeCachedSets } from './sets.js';

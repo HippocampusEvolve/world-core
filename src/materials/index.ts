@@ -29,6 +29,11 @@ export {
   logEnd,
   cloth,
   iron,
+  wool,
+  braid,
+  leather,
+  paper,
+  split,
   RECIPES,
   recipe,
   type Recipe,
@@ -43,4 +48,5 @@ export {
   type SetOptions,
   type MaterialOptions,
 } from './textures.js'
-export { boxUV, planeUV, cylinderUV, quadGeometry, type P3 } from './uv.js'
+export { boxUV, planeUV, cylinderUV, discUV, quadGeometry, type P3, type Along } from './uv.js'
+export { cachedSet, cachedSets, disposeCachedSets } from './sets.js'

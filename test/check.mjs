@@ -360,6 +360,36 @@ function assertions(m, all) {
     say(m.rows3.off > 0.02, 'и трёх рядов в этой же кладке замер не находит', `сдвиг ${(m.rows3.off * 100).toFixed(1)}% высоты`)
   }
 
+  // Мебель хижины: плед, коврик, книги, колотые дрова.
+  if (r.name === 'wool') {
+    say(m.roughMean > 0.9, 'шерсть без блеска (шероховатость > 0.9)', m.roughMean.toFixed(2))
+    say(warmth(m) > 25, 'плед тёплый (R − B > 25)', warmth(m).toFixed(1))
+    // Одноцветный плед читается крышкой ящика; клетка обязана быть видна.
+    say(m.p95 - m.p05 > 40, 'клетка читается: разброс яркости > 40', `${(m.p95 - m.p05).toFixed(0)}`)
+  }
+  if (r.name === 'braid') {
+    say(m.roughMean > 0.9, 'шнур без блеска (шероховатость > 0.9)', m.roughMean.toFixed(2))
+    say(m.tilt > 8, 'кольца шнура объёмные (наклон > 8°)', `${m.tilt.toFixed(1)}°`)
+  }
+  if (r.name === 'leather') {
+    // Одна карта на всю полку: цвет корешку даёт подкраска-множитель, и
+    // тёмная основа под тёмной подкраской ушла бы в чёрный.
+    say(m.lumMean > 150, 'основа светлая: цвет даёт подкраска, а не карта (яркость > 150)', m.lumMean.toFixed(0))
+    say(
+      m.roughMean > 0.55 && m.roughMean < 0.85,
+      'кожа с лёгким лоском: между тканью и чугуном (шероховатость 0.55..0.85)',
+      m.roughMean.toFixed(2),
+    )
+  }
+  if (r.name === 'paper') {
+    say(m.lumMean > 170, 'страницы светлые (яркость > 170)', m.lumMean.toFixed(0))
+    say(m.p05 < m.p50 * 0.85, 'листы читаются щелями (p05 < 0.85·p50)', `${m.p05.toFixed(0)} против ${m.p50.toFixed(0)}`)
+  }
+  if (r.name === 'split') {
+    const bark = all.find((x) => x.recipe.name === 'bark')
+    say(m.lumMean > bark.lumMean * 1.5, 'раскол светлее коры в полтора раза', `${m.lumMean.toFixed(0)} против ${bark.lumMean.toFixed(0)}`)
+  }
+
   return out
 }
 

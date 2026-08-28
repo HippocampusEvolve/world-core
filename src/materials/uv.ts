@@ -20,13 +20,31 @@
 
 import * as THREE from 'three'
 
+/** Ось коробки, вдоль которой должно лечь волокно (V карты). */
+export type Along = 'x' | 'y' | 'z'
+
 /**
  * Развернуть коробку по метражу. Порядок граней у `BoxGeometry`:
  * +X, −X, +Y, −Y, +Z, −Z; у каждой свои две меры из (w, h, d).
  *
  * `s` - тайлов на метр. 0.5 значит «один тайл на два метра».
+ *
+ * `along` - вдоль какой оси коробки идёт волокно. У всех деревянных наборов
+ * ядра волокно лежит по V, а штатная развёртка кладёт V на боковые грани
+ * вверх: у царги кровати или столешницы волокно встало бы поперёк доски, и
+ * глаз читает это мгновенно - доска будто из брусков. С `along` грань, у
+ * которой названная ось идёт по U, разворачивается на четверть. Грани,
+ * которым эта ось перпендикулярна (торцы доски), остаются как есть: там
+ * волокно и должно смотреть в кадр торцом.
  */
-export function boxUV(geo: THREE.BufferGeometry, w: number, h: number, d: number, s = 0.5): void {
+export function boxUV(
+  geo: THREE.BufferGeometry,
+  w: number,
+  h: number,
+  d: number,
+  s = 0.5,
+  along?: Along,
+): void {
   const uv = geo.attributes.uv as THREE.BufferAttribute
   // Индексация `f * 4 + k` ниже опирается на раскладку BoxGeometry без
   // сегментов: ровно четыре вершины на грань. У сегментированной коробки
@@ -47,13 +65,48 @@ export function boxUV(geo: THREE.BufferGeometry, w: number, h: number, d: number
     [w, h],
     [w, h],
   ]
+  // какая ось коробки лежит по U у каждой грани (V - вторая из пары)
+  const uAxis: Along[] = ['z', 'z', 'x', 'x', 'x', 'x']
   for (let f = 0; f < 6; f++) {
     const du = dims[f][0] * s
     const dv = dims[f][1] * s
+    const swap = along !== undefined && uAxis[f] === along
     for (let k = 0; k < 4; k++) {
       const i = f * 4 + k
-      uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv)
+      if (swap) uv.setXY(i, uv.getY(i) * dv, uv.getX(i) * du)
+      else uv.setXY(i, uv.getX(i) * du, uv.getY(i) * dv)
     }
+  }
+  uv.needsUpdate = true
+}
+
+/**
+ * Круг целиком на одну карту: для радиальных наборов, у которых есть
+ * середина, - торец полена, плетёный коврик.
+ *
+ * Крышки цилиндра у `cylinderUV` развёрнуты в метрах, как и всё остальное, и
+ * для плит очага на срезе пня это верно. Для торца полена - нет: карта торца
+ * задумана так, что её вписанный круг И ЕСТЬ торец (сердцевина в середине,
+ * кора по кромке), а метровая развёртка при радиусе в пять сантиметров
+ * показывала на торце четверть карты вокруг её угла - то есть кору и
+ * изнанку. Здесь вершины с нормалью вдоль `axis` получают UV от 0 до 1 по
+ * кругу радиуса `radius` вокруг оси: середина карты в середину торца.
+ *
+ * Считать после `cylinderUV` (она переписывает крышки) и до поворотов
+ * геометрии: отбор по нормали держится на том, что ось круга - его
+ * собственная.
+ */
+export function discUV(geo: THREE.BufferGeometry, radius: number, axis: Along = 'y'): void {
+  const uv = geo.attributes.uv as THREE.BufferAttribute
+  const pos = geo.attributes.position as THREE.BufferAttribute
+  const nor = geo.attributes.normal as THREE.BufferAttribute
+  const d = 2 * radius
+  for (let i = 0; i < uv.count; i++) {
+    const n = axis === 'y' ? nor.getY(i) : axis === 'x' ? nor.getX(i) : nor.getZ(i)
+    if (Math.abs(n) < 0.9) continue
+    const a = axis === 'y' ? pos.getX(i) : axis === 'x' ? pos.getZ(i) : pos.getX(i)
+    const b = axis === 'y' ? pos.getZ(i) : pos.getY(i)
+    uv.setXY(i, 0.5 + a / d, 0.5 + b / d)
   }
   uv.needsUpdate = true
 }

@@ -27,6 +27,11 @@ export declare const logEnd: Generator;
 export declare const cloth: Generator;
 export declare const iron: Generator;
 export declare function ashlar(warm?: boolean): Generator;
+export declare const wool: Generator;
+export declare const braid: Generator;
+export declare const leather: Generator;
+export declare const paper: Generator;
+export declare const split: Generator;
 /** В какие стороны карта стыкуется сама с собой. */
 export type Tiling = 'both' | 'u' | 'v' | 'none';
 export type Recipe = {
