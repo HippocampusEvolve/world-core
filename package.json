@@ -24,6 +24,10 @@
       "types": "./dist/materials/index.d.ts",
       "default": "./dist/materials/index.js"
     },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
     "./props": {
       "types": "./dist/props/index.d.ts",
       "default": "./dist/props/index.js"
@@ -31,7 +35,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "npm run build && node test/check.mjs"
+    "check": "npm run build && node test/check.mjs && node --test test/core.test.mjs"
   },
   "peerDependencies": {
     "three": ">=0.170"
