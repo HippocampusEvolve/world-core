@@ -23,6 +23,32 @@ const { Body, Input } = await import('../dist/core/index.js')
 
 const DT = 1 / 60
 
+test('клавиатура оставляет меню пробел и не передаёт его в прыжок', () => {
+  const listeners = {}
+  const previous = globalThis.addEventListener
+  globalThis.addEventListener = (name, fn) => { listeners[name] = fn }
+  try {
+    const look = { isLocked: false }
+    const input = new Input({ look, target: { addEventListener() {} } })
+    let prevented = false
+    const event = { code: 'Space', preventDefault() { prevented = true }, target: null }
+    listeners.keydown(event)
+    assert.equal(prevented, false)
+    assert.equal(input.keys.has('Space'), false)
+
+    look.isLocked = true
+    listeners.keydown({ ...event, target: { closest: () => ({ tagName: 'BUTTON' }) } })
+    assert.equal(prevented, false)
+    assert.equal(input.keys.has('Space'), false)
+
+    listeners.keydown(event)
+    assert.equal(prevented, true)
+    assert.equal(input.update(DT).jump, true)
+    listeners.keyup(event)
+    assert.equal(input.update(DT).jump, false)
+  } finally { globalThis.addEventListener = previous }
+})
+
 /** Пол на нуле, ничего не толкает, стен нет. */
 const FLAT = {
   floorAt: () => ({ y: 0, surface: 'flat' }),

@@ -53,6 +53,12 @@ export class Input {
         this.arrowTurn = opts.arrowTurn ?? false;
         this.arrowRate = opts.arrowRate ?? 2.2;
         addEventListener('keydown', (e) => {
+            // Кнопки и поля сохраняют стандартные действия клавиатуры, даже если
+            // меню открылось поверх мира. Пробел на кнопке не становится прыжком.
+            const target = e.target;
+            if (e.defaultPrevented || !this.locked ||
+                target?.closest?.('button, a, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="button"]'))
+                return;
             if (e.code === 'Space')
                 e.preventDefault(); // пробел не скроллит страницу
             this.keys.add(e.code);
