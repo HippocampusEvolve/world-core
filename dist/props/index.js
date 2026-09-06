@@ -24,4 +24,5 @@ export { bed } from './bed.js';
 export { table, stool } from './table.js';
 export { rug } from './rug.js';
 export { shelfWithBooks } from './books.js';
+export { shovel } from './shovel.js';
 //# sourceMappingURL=index.js.map

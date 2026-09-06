@@ -43,14 +43,14 @@ function wrapi(a, n) {
  * Множитель `S / 128` держит рельеф одинаковым при разном размере карты: без
  * него та же поверхность на 512 выглядит вчетверо глаже, чем на 128.
  */
-export function normalFromHeight(H, S, strength) {
+export function normalFromHeight(H, S, strength, bias = [0, 0]) {
     const out = new Uint8ClampedArray(S * S * 4);
     const at = (x, y) => H[wrapi(y, S) * S + wrapi(x, S)];
     let i = 0;
     for (let y = 0; y < S; y++) {
         for (let x = 0; x < S; x++, i++) {
-            const dx = (at(x + 1, y) - at(x - 1, y)) * strength * S / 128;
-            const dy = (at(x, y + 1) - at(x, y - 1)) * strength * S / 128;
+            const dx = (at(x + 1, y) - at(x - 1, y)) * strength * S / 128 - bias[0];
+            const dy = (at(x, y + 1) - at(x, y - 1)) * strength * S / 128 + bias[1];
             const l = Math.sqrt(dx * dx + dy * dy + 1);
             const o = i * 4;
             out[o] = (-dx / l * 0.5 + 0.5) * 255;
@@ -110,10 +110,11 @@ export function bake(gen, size, normalStrength = 2.2) {
             }
         }
     }
+    gen.release?.();
     return {
         size,
         albedo,
-        normal: normalFromHeight(H, size, normalStrength),
+        normal: normalFromHeight(H, size, normalStrength, gen.normalBias),
         rough: grayBytes(R, size),
         metal: hasMetal ? grayBytes(M, size) : null,
         height: H,

@@ -20,4 +20,5 @@ export { log, rubble, ashlar, hearth, firebrick, floor, beam, bark, logEnd, clot
 export { makeSet, toTextures, material, disposeSet, } from './textures.js';
 export { boxUV, planeUV, cylinderUV, discUV, quadGeometry } from './uv.js';
 export { cachedSet, cachedSets, disposeCachedSets } from './sets.js';
+export { surfaceGenerator, SURFACE_KINDS, SURFACE_RECIPES, SURFACE_MEAN_LINEAR } from './surfaces.js';
 //# sourceMappingURL=index.js.map

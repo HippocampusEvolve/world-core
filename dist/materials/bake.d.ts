@@ -43,7 +43,12 @@ export type Px = {
  * Каждый вызов начинается с чистого пикселя: цвет сброшен в нули, остальные
  * поля - в значения по умолчанию. От предыдущего пикселя не остаётся ничего.
  */
-export type Generator = (x: number, y: number, S: number, p: Px) => void;
+export type Generator = ((x: number, y: number, S: number, p: Px) => void) & {
+    /** Measured tangent-space bias, for references whose normals are not centred. */
+    normalBias?: readonly number[];
+    /** Drop optional synthesis scratch buffers after baking. */
+    release?: () => void;
+};
 /** Выпеченный набор карт. Все байтовые массивы - RGBA, длиной size²·4. */
 export type Baked = {
     size: number;
@@ -69,7 +74,7 @@ export type Baked = {
  * Множитель `S / 128` держит рельеф одинаковым при разном размере карты: без
  * него та же поверхность на 512 выглядит вчетверо глаже, чем на 128.
  */
-export declare function normalFromHeight(H: Float32Array, S: number, strength: number): Uint8ClampedArray;
+export declare function normalFromHeight(H: Float32Array, S: number, strength: number, bias?: readonly number[]): Uint8ClampedArray;
 /**
  * Посчитать набор карт для генератора.
  *

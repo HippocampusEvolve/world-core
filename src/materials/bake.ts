@@ -45,7 +45,12 @@ export type Px = {
  * Каждый вызов начинается с чистого пикселя: цвет сброшен в нули, остальные
  * поля - в значения по умолчанию. От предыдущего пикселя не остаётся ничего.
  */
-export type Generator = (x: number, y: number, S: number, p: Px) => void
+export type Generator = ((x: number, y: number, S: number, p: Px) => void) & {
+  /** Measured tangent-space bias, for references whose normals are not centred. */
+  normalBias?: readonly number[]
+  /** Drop optional synthesis scratch buffers after baking. */
+  release?: () => void
+}
 
 /** Выпеченный набор карт. Все байтовые массивы - RGBA, длиной size²·4. */
 export type Baked = {
@@ -82,14 +87,14 @@ function wrapi(a: number, n: number): number {
  * Множитель `S / 128` держит рельеф одинаковым при разном размере карты: без
  * него та же поверхность на 512 выглядит вчетверо глаже, чем на 128.
  */
-export function normalFromHeight(H: Float32Array, S: number, strength: number): Uint8ClampedArray {
+export function normalFromHeight(H: Float32Array, S: number, strength: number, bias: readonly number[] = [0, 0]): Uint8ClampedArray {
   const out = new Uint8ClampedArray(S * S * 4)
   const at = (x: number, y: number): number => H[wrapi(y, S) * S + wrapi(x, S)]
   let i = 0
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++, i++) {
-      const dx = (at(x + 1, y) - at(x - 1, y)) * strength * S / 128
-      const dy = (at(x, y + 1) - at(x, y - 1)) * strength * S / 128
+      const dx = (at(x + 1, y) - at(x - 1, y)) * strength * S / 128 - bias[0]
+      const dy = (at(x, y + 1) - at(x, y - 1)) * strength * S / 128 + bias[1]
       const l = Math.sqrt(dx * dx + dy * dy + 1)
       const o = i * 4
       out[o] = (-dx / l * 0.5 + 0.5) * 255
@@ -154,10 +159,11 @@ export function bake(gen: Generator, size: number, normalStrength = 2.2): Baked 
     }
   }
 
+  gen.release?.()
   return {
     size,
     albedo,
-    normal: normalFromHeight(H, size, normalStrength),
+    normal: normalFromHeight(H, size, normalStrength, gen.normalBias),
     rough: grayBytes(R, size),
     metal: hasMetal ? grayBytes(M, size) : null,
     height: H,

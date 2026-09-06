@@ -49,6 +49,27 @@ test('клавиатура оставляет меню пробел и не пе
   } finally { globalThis.addEventListener = previous }
 })
 
+test('придержанная F делает одно действие, а не тридцать в секунду', () => {
+  const listeners = {}
+  const previous = globalThis.addEventListener
+  globalThis.addEventListener = (name, fn) => { listeners[name] = fn }
+  try {
+    const look = { isLocked: true }
+    const input = new Input({ look, target: { addEventListener() {} } })
+    let actions = 0
+    input.onAction = () => { actions++ }
+    const press = (repeat) => listeners.keydown({ code: 'KeyF', repeat, target: null, preventDefault() {} })
+
+    press(false)
+    for (let i = 0; i < 30; i++) press(true) // автоповтор системы за секунду удержания
+    assert.equal(actions, 1)
+
+    listeners.keyup({ code: 'KeyF' })
+    press(false) // отпустил и нажал снова - это уже второе действие
+    assert.equal(actions, 2)
+  } finally { globalThis.addEventListener = previous }
+})
+
 /** Пол на нуле, ничего не толкает, стен нет. */
 const FLAT = {
   floorAt: () => ({ y: 0, surface: 'flat' }),

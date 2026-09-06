@@ -19,6 +19,7 @@
 import { fbm, hash2, ridge, worley, wrapi } from './noise.js'
 import { add, cl01, mix, ss, type RGB } from './shape.js'
 import type { Generator, Px } from './bake.js'
+import { SURFACE_RECIPES } from './surfaces.js'
 
 const TAU = Math.PI * 2
 
@@ -697,6 +698,7 @@ export type Recipe = {
 }
 
 export const RECIPES: Recipe[] = [
+  ...SURFACE_RECIPES,
   { name: 'log', title: 'брёвна сруба', size: 512, normalStrength: 2.6, tiles: 'both', gen: log },
   {
     name: 'rubble',

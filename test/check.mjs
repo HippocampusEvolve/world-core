@@ -29,6 +29,7 @@
 import { bake } from '../dist/materials/bake.js'
 import { RECIPES, firebrick } from '../dist/materials/generators.js'
 import { hash2 } from '../dist/materials/noise.js'
+import { SURFACE_MEAN_LINEAR } from '../dist/materials/surfaces.js'
 
 /* ------------------------------- замеры ------------------------------- */
 
@@ -266,6 +267,15 @@ function assertions(m, all) {
   const out = []
   const say = (ok, text, got) => out.push({ ok, text, got })
   const r = m.recipe
+  if (r.name in SURFACE_MEAN_LINEAR) {
+    let sum = 0
+    for (let i = 0; i < m.baked.albedo.length; i += 4) {
+      const v = m.baked.albedo[i] / 255
+      sum += v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+    }
+    const mean = sum / (m.baked.albedo.length / 4)
+    say(Math.abs(mean - SURFACE_MEAN_LINEAR[r.name]) < 0.00001, 'сохранена калибровка яркости палитры', mean)
+  }
 
   // шов по замыслу рецепта
   const wantU = r.tiles === 'both' || r.tiles === 'u'
@@ -276,9 +286,9 @@ function assertions(m, all) {
   // рельеф есть у всех
   say(m.tilt >= TILT_MIN, `рельеф читается (наклон ≥ ${TILT_MIN}°)`, `${m.tilt.toFixed(1)}°`)
 
-  // металл: только у чугуна
-  if (r.name === 'iron') {
-    say(m.hasMetal, 'чугун - металл: карта металла есть', m.hasMetal ? 'есть' : 'нет')
+  // Чугун и обработанная сталь по замыслу металлические; ржавчина диэлектрик.
+  if (r.name === 'iron' || r.name === 'surfaceMetal') {
+    say(m.hasMetal, 'металлическая поверхность: карта металла есть', m.hasMetal ? 'есть' : 'нет')
     say(m.metalMean > 0.5, 'и он не бутафорский (среднее > 0.5)', m.metalMean?.toFixed(2) ?? '-')
     say(m.roughMean < 0.75, 'чугун блестит (шероховатость < 0.75)', m.roughMean.toFixed(2))
   } else {

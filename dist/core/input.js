@@ -62,7 +62,12 @@ export class Input {
             if (e.code === 'Space')
                 e.preventDefault(); // пробел не скроллит страницу
             this.keys.add(e.code);
-            if (e.code === 'KeyF' && this.locked)
+            // Рука делает одно движение на одно нажатие. Придержанную клавишу
+            // система повторяет три десятка раз в секунду, и без этой проверки
+            // взять-положить чередовались бы каждый кадр: лопата мигала между рукой
+            // и снегом, полено прыгало из штабеля в руки и обратно. Удержание
+            // читают те, кому оно нужно, - через `keys` в `intent`.
+            if (e.code === 'KeyF' && this.locked && !e.repeat)
                 this.onAction?.();
         });
         addEventListener('keyup', (e) => this.keys.delete(e.code));

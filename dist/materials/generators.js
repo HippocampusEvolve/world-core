@@ -17,6 +17,7 @@
  */
 import { fbm, hash2, ridge, worley, wrapi } from './noise.js';
 import { add, cl01, mix, ss } from './shape.js';
+import { SURFACE_RECIPES } from './surfaces.js';
 const TAU = Math.PI * 2;
 /* ------------------------------------------------------------------ *
  * 1. Бревно сруба - продольная свиль, трещины усушки, потемневшее дерево
@@ -625,6 +626,7 @@ export const split = (x, y, S, p) => {
     p.rough = 0.88 + (fine - 0.5) * 0.08;
 };
 export const RECIPES = [
+    ...SURFACE_RECIPES,
     { name: 'log', title: 'брёвна сруба', size: 512, normalStrength: 2.6, tiles: 'both', gen: log },
     {
         name: 'rubble',
