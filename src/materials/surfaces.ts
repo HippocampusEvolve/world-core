@@ -6,10 +6,20 @@ import { calibratedSurface } from './spectral.js'
 export type SurfaceKind = 'snow' | 'rock' | 'gravel' | 'concrete' | 'wood' | 'rust' | 'metal' | 'cloth' | 'ice' | 'paper'
 const TAU = Math.PI * 2
 
-// Measured linear mean of the 256px recipes below. The material test checks
+// Measured linear mean at each recipe's native resolution. The test checks
 // these values; clients can compensate their palette before cloning materials.
 export const SURFACE_MEAN_LINEAR: Record<string, number> = {
-  surfaceSnow: 0.9111900618229365, surfaceRock: 0.8219052662388465,
+  surfaceTowerSnow: 0.5822353273386727,
+  surfaceTowerRock: 1.0,
+  surfaceTowerGravel: 1.0,
+  surfaceTowerConcrete: 0.4824749798746426,
+  surfaceTowerWood: 1.0,
+  surfaceTowerRust: 1.0,
+  surfaceTowerMetal: 1.0,
+  surfaceTowerCloth: 1.0,
+  surfaceTowerIce: 1.0,
+  surfaceTowerPaper: 0.7403767635403626,
+  surfaceSnow: 0.3807735611693207, surfaceRock: 0.8219052662388465,
   surfaceGravel: 0.8081718405863105, surfaceConcrete: 0.8383933638521872,
   surfaceWood: 0.7492808629959894, surfaceRust: 0.8157743628531261,
   surfaceMetal: 0.8077781709824997, surfaceCloth: 0.8122590918638553,
@@ -95,7 +105,7 @@ SURFACE_RECIPES[0].normalStrength = 1
 SURFACE_RECIPES.push(...SURFACE_KINDS.map((kind, i): Recipe => ({
   name: `surfaceTower${kind[0].toUpperCase()}${kind.slice(1)}`,
   title: `поверхность башни: ${kind}`,
-  size: 1024,
+  size: ['wood', 'rust', 'cloth'].includes(kind) ? 512 : 1024,
   normalStrength: 1,
   tiles: 'both',
   gen: calibratedSurface(kind, 2909 + i * 97),

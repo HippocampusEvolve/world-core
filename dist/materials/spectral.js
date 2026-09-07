@@ -54,11 +54,15 @@ function fft2(re, im, n, inverse) {
             }
         }
 }
-function field(profile, n, seed, relief, cells) {
+function field(profile, n, seed, relief, cells, sparse = false, repeats = 1) {
+    const fullSize = n;
+    n /= repeats;
     const re = new Float64Array(n * n), im = new Float64Array(n * n);
     for (let y = 0; y < n; y++)
         for (let x = 0; x < n; x++) {
             let v = hash2(x, y, seed) - .5;
+            if (sparse)
+                v = v > .485 ? (v - .485) / .015 : 0;
             if (cells) {
                 const c = worley(x / n * cells, y / n * cells, cells, cells, seed);
                 v += 4 * (c.f2 - c.f1);
@@ -70,7 +74,7 @@ function field(profile, n, seed, relief, cells) {
     for (let y = 0; y < n; y++)
         for (let x = 0; x < n; x++) {
             const fx = x <= n / 2 ? x : x - n, fy = y <= n / 2 ? y : y - n;
-            const radius = Math.hypot(fx, fy), i = y * n + x;
+            const radius = Math.hypot(fx, fy) * repeats, i = y * n + x;
             const b = Math.min(9, Math.max(0, Math.floor(Math.log2(Math.max(1, radius)))));
             band[i] = b;
             if (!radius) {
@@ -91,24 +95,49 @@ function field(profile, n, seed, relief, cells) {
     fft2(re, im, n, true);
     for (let i = 0; i < re.length; i++)
         re[i] += profile.mean;
-    if (profile.quantiles) {
-        // Rank-preserving histogram transfer handles sparse exposed metal and rust
-        // without clipping a Gaussian field into a flat white/black plateau.
-        const sorted = re.slice().sort(), q = profile.quantiles;
-        for (let i = 0; i < re.length; i++) {
-            let lo = 0, hi = sorted.length - 1;
-            while (lo < hi) {
-                const mid = (lo + hi) >>> 1;
-                if (sorted[mid] < re[i])
-                    lo = mid + 1;
-                else
-                    hi = mid;
+    if (profile.quantiles)
+        for (let iteration = 0; iteration < 8; iteration++) {
+            // Rank-preserving histogram transfer handles sparse exposed metal and rust
+            // without clipping a Gaussian field into a flat white/black plateau.
+            const sorted = re.slice().sort(), q = profile.quantiles;
+            for (let i = 0; i < re.length; i++) {
+                let lo = 0, hi = sorted.length - 1;
+                while (lo < hi) {
+                    const mid = (lo + hi) >>> 1;
+                    if (sorted[mid] < re[i])
+                        lo = mid + 1;
+                    else
+                        hi = mid;
+                }
+                const u = lo / (sorted.length - 1) * (q.length - 1), a = Math.min(q.length - 2, Math.floor(u));
+                re[i] = q[a] + (q[a + 1] - q[a]) * (u - a);
             }
-            const u = lo / (sorted.length - 1) * (q.length - 1), a = Math.min(q.length - 2, Math.floor(u));
-            re[i] = q[a] + (q[a + 1] - q[a]) * (u - a);
+            // Alternating spectral/histogram projections preserve sparse patches.
+            // Final histogram projection guarantees legal PBR values without clipping.
+            if (iteration === 7)
+                break;
+            im.fill(0);
+            fft2(re, im, n, false);
+            energy.fill(0);
+            re[0] = im[0] = 0;
+            for (let i = 0; i < re.length; i++)
+                energy[band[i]] += (re[i] ** 2 + im[i] ** 2) / n ** 4;
+            for (let i = 0; i < re.length; i++) {
+                const b = band[i], scale = energy[b] ? profile.bands[b] / Math.sqrt(energy[b]) : 0;
+                re[i] *= scale;
+                im[i] *= scale;
+            }
+            fft2(re, im, n, true);
+            for (let i = 0; i < re.length; i++)
+                re[i] += profile.mean;
         }
-    }
-    return re;
+    if (repeats === 1)
+        return re;
+    const tiled = new Float64Array(fullSize ** 2);
+    for (let y = 0; y < fullSize; y++)
+        for (let x = 0; x < fullSize; x++)
+            tiled[y * fullSize + x] = re[(y % n) * n + x % n];
+    return tiled;
 }
 const srgb = (v) => 255 * (v <= .0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - .055);
 /** Seeded periodic synthesis from measured band energies, never source pixels. */
@@ -120,9 +149,9 @@ export function calibratedSurface(kind, seed) {
             const profile = SURFACE_PROFILES[kind];
             const cells = kind === 'rock' ? 9 : kind === 'gravel' ? 28 : 0;
             color = 'albedo' in profile ? field(profile.albedo, size, seed, false, 0) : undefined;
-            height = field(profile.normal, size, seed + 1, true, cells);
+            height = field(profile.normal, size, seed + 1, true, cells, kind === 'metal');
             rough = field(profile.rough, size, seed + 2, false, 0);
-            metal = 'metal' in profile ? field(profile.metal, size, seed + 3, false, 0) : undefined;
+            metal = 'metal' in profile ? field(profile.metal, size, seed + 3, false, 0, false, kind === 'metal' ? 8 : 1) : undefined;
             cachedSize = size;
         }
         const i = ((y % size + size) % size) * size + ((x % size + size) % size);

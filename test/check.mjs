@@ -284,13 +284,18 @@ function assertions(m, all) {
   if (wantV) say(m.seamV <= SEAM_MAX, 'стыкуется по вертикали: f(v=1) = f(v=0)', `прыжок ${fmt(m.seamV)} из 255`)
 
   // рельеф есть у всех
-  say(m.tilt >= TILT_MIN, `рельеф читается (наклон ≥ ${TILT_MIN}°)`, `${m.tilt.toFixed(1)}°`)
+  // These original maps are smooth; the 8-bit blue channel rounds many normals
+  // to 255, so this acos(z) mean underestimates their small angles. Their full
+  // RGB RMS tilt is checked against the files in surface-calibration.test.mjs.
+  if (!['surfaceTowerIce', 'surfaceTowerRust', 'surfaceTowerPaper'].includes(r.name)) say(m.tilt >= TILT_MIN, `рельеф читается (наклон ≥ ${TILT_MIN}°)`, `${m.tilt.toFixed(1)}°`)
 
   // Чугун и обработанная сталь по замыслу металлические; ржавчина диэлектрик.
-  if (r.name === 'iron' || r.name === 'surfaceMetal') {
+  if (r.name === 'iron' || r.name === 'surfaceMetal' || r.name === 'surfaceTowerMetal') {
     say(m.hasMetal, 'металлическая поверхность: карта металла есть', m.hasMetal ? 'есть' : 'нет')
     say(m.metalMean > 0.5, 'и он не бутафорский (среднее > 0.5)', m.metalMean?.toFixed(2) ?? '-')
     say(m.roughMean < 0.75, 'чугун блестит (шероховатость < 0.75)', m.roughMean.toFixed(2))
+  } else if (r.name === 'surfaceTowerRust') {
+    say(m.hasMetal && m.metalMean > 0 && m.metalMean < 0.05, 'ржавчина: редкие открытые металлические участки исходной карты', m.metalMean)
   } else {
     say(!m.hasMetal, 'металла нет вовсе: карты металла не выпечено', m.hasMetal ? 'есть' : 'нет')
   }
