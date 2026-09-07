@@ -56,7 +56,7 @@ export class Input {
             // Кнопки и поля сохраняют стандартные действия клавиатуры, даже если
             // меню открылось поверх мира. Пробел на кнопке не становится прыжком.
             const target = e.target;
-            if (e.defaultPrevented || !this.locked ||
+            if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !this.locked ||
                 target?.closest?.('button, a, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="button"]'))
                 return;
             if (e.code === 'Space')

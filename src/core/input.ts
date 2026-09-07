@@ -49,7 +49,7 @@ export interface InputOptions {
   look: SmoothLook
   /** Элемент, на котором ловятся кнопки инструмента (канвас мира). */
   target: HTMLElement
-  /** Нажата кнопка действия. Зовётся на каждое нажатие, автоповтор включая. */
+  /** Нажата кнопка действия. Одно действие на нажатие, без автоповтора. */
   onAction?: () => void
   /** Кнопка инструмента нажата или отпущена: слот 1 - ЛКМ, слот 2 - ПКМ. */
   onTool?: (slot: 1 | 2, down: boolean) => void
@@ -101,7 +101,7 @@ export class Input {
       // Кнопки и поля сохраняют стандартные действия клавиатуры, даже если
       // меню открылось поверх мира. Пробел на кнопке не становится прыжком.
       const target = e.target as HTMLElement | null
-      if (e.defaultPrevented || !this.locked ||
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !this.locked ||
         target?.closest?.('button, a, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="button"]')) return
       if (e.code === 'Space') e.preventDefault() // пробел не скроллит страницу
       this.keys.add(e.code)

@@ -16,6 +16,10 @@
     "LICENSE"
   ],
   "exports": {
+    "./ecology": {
+      "types": "./dist/ecology/index.d.ts",
+      "default": "./dist/ecology/index.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
