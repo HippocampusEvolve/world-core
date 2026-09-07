@@ -412,7 +412,7 @@ roughness и сила normal подогнаны к исходным картам
 ## Живые миры: `world-core/ecology`
 
 Процедурные лиса, олень и ворон (`createAnimal`), ограниченная популяция с
-проверкой рельефа (`createWildlife`), семь видов растений (`createPlantGeometry`,
+проверкой рельефа (`createWildlife`), семь видов растений (`plantGeometry`,
 `createVegetation`) и пространственные голоса природы (`createNatureSoundscape`).
 Животные занимают 560–1220 треугольников, растения — до 5000 на вариант;
 растения объединены в пространственные InstancedMesh. Материалы используют
