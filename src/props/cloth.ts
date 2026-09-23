@@ -101,8 +101,9 @@ export function coat({ length = 1.25, hood = true, cape = false, width, reach = 
       ]
     : [
         [0.008, 0.035, 0.025],
-        [0.025, 0.07, 0.045],
-        [0.045, 0.1, 0.055],
+        [0.025, 0.06, 0.04],
+        [0.05, 0.085, 0.05],
+        [0.08, 0.1, 0.055],
       ]
   const ds = d0 + top[top.length - 1][0] + 0.03
   // корпус: [от плеч, полуширина]; у плащ-палатки конус от шеи
@@ -115,9 +116,10 @@ export function coat({ length = 1.25, hood = true, cape = false, width, reach = 
         [L, 0.36],
       ]
     : [
-        [0, 0.15],
-        [0.04, 0.2],
-        [0.1, 0.225],
+        // плечи покатые: висящий плащ опускает их, а не держит
+        [0, 0.12],
+        [0.05, 0.175],
+        [0.12, 0.215],
         [0.3, 0.232],
         [0.55, 0.245],
         [L, 0.27],
@@ -170,7 +172,7 @@ export function coat({ length = 1.25, hood = true, cape = false, width, reach = 
       if (front <= 0) return [0, 0]
       // рукава: вздутие по бокам, чуть к переду, от плеча до манжеты
       const side = Math.min(Math.abs(Math.atan2(s, Math.cos(a)) - 0.25), Math.abs(Math.atan2(s, Math.cos(a)) - (Math.PI - 0.25)))
-      const arm = SLEEVE * Math.exp(-((side / 0.38) ** 2)) * ss(ds - 0.02, ds + 0.07, d) * (1 - ss(cuff - 0.004, cuff + 0.012, d))
+      const arm = SLEEVE * Math.exp(-((side / 0.38) ** 2)) * ss(ds + 0.02, ds + 0.12, d) * (1 - ss(cuff - 0.004, cuff + 0.012, d))
       // складки: только наружу, от нуля у груди до полной у подола
       const nf = cape ? 5 : 7
       const fold = FOLD * ss(ds + 0.12, L, d) ** 1.3 * (0.5 - 0.5 * Math.cos(nf * a + ph + d * 2.1))
