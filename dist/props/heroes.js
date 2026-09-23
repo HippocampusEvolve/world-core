@@ -7,9 +7,12 @@
  * оси и записью в `userData`, как их вращать (см. `heroes/kit.ts`), - и
  * `moving`: те же части по именам, чтобы миру не искать их обходом.
  *
- * Материалы - по ролям из словаря `ROLES`; мир подменяет любые через `mats`.
+ * Материалы - по ролям из общего словаря каталога (краска, сталь, ткань,
+ * стекло, светящиеся экран, шкала, огонёк...); мир подменяет любые через
+ * `mats`. Сам словарь отсюда не выходит: имена ролей те же, что у казённых
+ * предметов, и второй экспорт с тем же именем столкнулся бы с их словарём.
  */
-export { ROLES, turn, movingParts } from './heroes/kit.js';
+export { turn, movingParts } from './heroes/kit.js';
 export { tubeFixture } from './heroes/tube.js';
 export { cageLamp } from './heroes/cage.js';
 export { generator } from './heroes/generator.js';
