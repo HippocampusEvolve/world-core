@@ -19,4 +19,5 @@ export { deskLamp } from './heroes/desklamp.js';
 export { hatchLid } from './heroes/hatch.js';
 export { porthole } from './heroes/porthole.js';
 export { pod } from './heroes/pod.js';
+export { climateConsole, tarp } from './heroes/climate.js';
 //# sourceMappingURL=heroes.js.map
