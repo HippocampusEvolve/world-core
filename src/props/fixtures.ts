@@ -146,11 +146,13 @@ export function extinguisher({ mats }: ExtinguisherOptions = {}): Extinguisher {
   const m = roleMats(mats, { paint: 0xb3261e })
   const za = 0.1 // ось баллона от стены
   const R = 0.075
-  // кронштейн: планка на стене и стойка к хомуту
-  g.add(boxMesh('extinguisher-plate', 0.05, 0.34, 0.008, m('steel'), 0, 0.07, 0.004, 4))
+  // кронштейн: планка на стене и стойка к хомуту. Планка толщиной 12 мм:
+  // лицо тоньше сантиметра спорило бы со стеной за глубину
+  const PL = 0.012
+  g.add(boxMesh('extinguisher-plate', 0.05, 0.34, PL, m('steel'), 0, 0.07, PL / 2, 4))
   const bandIn = R + 0.0005
   const bandOut = R + 0.0045
-  g.add(boxMesh('extinguisher-standoff', 0.03, 0.03, za - bandOut - 0.008, m('steel'), 0, -0.065, 0.008 + (za - bandOut - 0.008) / 2, 4))
+  g.add(boxMesh('extinguisher-standoff', 0.03, 0.03, za - bandOut - PL, m('steel'), 0, -0.065, PL + (za - bandOut - PL) / 2, 4))
   const band = mesh(
     'extinguisher-band',
     revolve(
@@ -213,10 +215,11 @@ export type CableTrayOptions = { length?: number; cables?: number; mats?: Mats }
 export type CableTray = Sized & { cables: THREE.Mesh[] }
 
 /**
- * Лоток-швеллер шириной 0.2 с кабелями. Начало - середина одного конца по
- * низу лотка: лоток идёт вдоль +X, ширина по Z, y = 0 - низ дна. Кабели
- * лежат на дне и чуть гуляют, концы заподлицо с торцами лотка: лотки
- * ставятся встык. Роли: steel (лоток), rubber (кабели).
+ * Лоток-швеллер шириной 0.2 с кабелями, на поперечных кронштейнах. Начало -
+ * середина одного конца по низу: лоток идёт вдоль +X, ширина по Z, y = 0 -
+ * опора кронштейнов (свод, стена), дно лотка на 2 см выше. Кабели лежат на
+ * дне и чуть гуляют, концы заподлицо с торцами лотка: лотки ставятся встык.
+ * Роли: steel (лоток, кронштейны), rubber (кабели).
  */
 export function cableTray({ length = 2, cables = 4, mats }: CableTrayOptions = {}): CableTray {
   const g = new THREE.Group()
@@ -225,10 +228,23 @@ export function cableTray({ length = 2, cables = 4, mats }: CableTrayOptions = {
   const W = 0.2
   const BT = 0.004
   const SH = 0.05
+  // лоток лежит на поперечных прутках высотой 2 см: дно в 4 мм, лёгшее
+  // прямо на опору, спорило бы с ней за глубину всей своей площадью, а
+  // плоская планка под дном - верхом с верхом дна. У прутка с нечётным
+  // числом граней сверху и снизу рёбра. Прутки не у торцов: лотки встык не
+  // делят один пруток на двоих
+  const LEG = 0.02
+  const RAD5 = 5
+  const rr = LEG / 2 / Math.cos(Math.PI / (2 * RAD5))
+  const nb = Math.max(2, Math.round(length / 0.6))
+  for (let i = 0; i < nb; i++) {
+    const x = ((i + 0.5) * length) / nb
+    g.add(mesh('tray-bracket', pipe([[x, LEG / 2, -W / 2], [x, LEG / 2, W / 2]], rr, RAD5), m('steel')))
+  }
   // стенки на всю высоту швеллера, дно между ними: низ дна и низы стенок -
   // соседи в одной плоскости, а не наложение
-  g.add(boxMesh('tray-bottom', length, BT, W - 2 * BT, m('steel'), length / 2, BT / 2, 0, 2, 'x'))
-  for (const sz of [-1, 1]) g.add(boxMesh('tray-side', length, BT + SH, BT, m('steel'), length / 2, (BT + SH) / 2, sz * (W / 2 - BT / 2), 2, 'x'))
+  g.add(boxMesh('tray-bottom', length, BT, W - 2 * BT, m('steel'), length / 2, LEG + BT / 2, 0, 2, 'x'))
+  for (const sz of [-1, 1]) g.add(boxMesh('tray-side', length, BT + SH, BT, m('steel'), length / 2, LEG + (BT + SH) / 2, sz * (W / 2 - BT / 2), 2, 'x'))
   const n = Math.max(1, Math.min(5, cables))
   const radii = [0.012, 0.008, 0.015, 0.01, 0.009]
   const lane = (W - 2 * BT) / n
@@ -243,7 +259,7 @@ export function cableTray({ length = 2, cables = 4, mats }: CableTrayOptions = {
     const amp = Math.max(0, lane / 2 - r - 0.002)
     const pts: P3[] = []
     const K = 6
-    const y = BT + r * low + 0.0005
+    const y = LEG + BT + r * low + 0.0005
     // у торцов кабель идёт прямо: срез кабеля заподлицо с торцом лотка
     const END = 0.05
     pts.push([0, y, zc])
@@ -257,7 +273,7 @@ export function cableTray({ length = 2, cables = 4, mats }: CableTrayOptions = {
     g.add(c)
     list.push(c)
   }
-  return { group: g, w: length, d: W, h: BT + SH, cables: list }
+  return { group: g, ...frameOf(g), cables: list }
 }
 
 /* ------------------------------------ раковина ------------------------------------ */
@@ -416,7 +432,9 @@ export function photoFrame({ w = 0.3, h = 0.2, mats }: PhotoFrameOptions = {}): 
   const FD = 0.015
   for (const sy of [-1, 1]) g.add(boxMesh('photo-frame-bar', w, F, FD, m('wood'), 0, sy * (h / 2 - F / 2), FD / 2, 4, 'x'))
   for (const sx of [-1, 1]) g.add(boxMesh('photo-frame-bar', F, h - 2 * F, FD, m('wood'), sx * (w / 2 - F / 2), 0, FD / 2, 4, 'y'))
-  const photo = mesh('photo-frame-photo', new THREE.PlaneGeometry(w - 2 * F, h - 2 * F), m('photo'), 0, 0, 0.004)
+  // снимок утоплен в рамку, но от стены дальше сантиметра: ближе он спорил
+  // бы со стеной за глубину
+  const photo = mesh('photo-frame-photo', new THREE.PlaneGeometry(w - 2 * F, h - 2 * F), m('photo'), 0, 0, 0.011)
   g.add(photo)
   return { group: g, w, d: FD, h, photo }
 }

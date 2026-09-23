@@ -290,7 +290,10 @@ export function tagBox({ tags = 16, seed = 1, mats }: TagBoxOptions = {}): TagBo
   const B = 0.008
   for (const sz of [-1, 1]) g.add(boxMesh('tagbox-side', W, H, B, m('wood'), 0, H / 2, sz * (D / 2 - B / 2), 4, 'x'))
   for (const sx of [-1, 1]) g.add(boxMesh('tagbox-end', B, H, D - 2 * B, m('wood'), sx * (W / 2 - B / 2), H / 2, 0, 4, 'z'))
-  g.add(boxMesh('tagbox-bottom', W - 2 * B, B, D - 2 * B, m('wood'), 0, B / 2, 0, 4, 'x'))
+  // дно толще стенок: его верх - внутри ящичка на 12 мм над столом, а не на
+  // 8, иначе он спорил бы со столешницей за глубину
+  const BB = 0.012
+  g.add(boxMesh('tagbox-bottom', W - 2 * B, BB, D - 2 * B, m('wood'), 0, BB / 2, 0, 4, 'x'))
   const n = Math.max(1, Math.min(tags, 18))
   const step = 0.012
   const TH = 0.055
@@ -301,7 +304,7 @@ export function tagBox({ tags = 16, seed = 1, mats }: TagBoxOptions = {}): TagBo
     const lean = (rnd() - 0.5) * 0.1
     const yaw = (rnd() - 0.5) * 0.12
     const t = boxGeo(0.001, TH, TW, 0, TH / 2, 0)
-    place(t, x, B, (rnd() - 0.5) * 0.02, 0, yaw, lean)
+    place(t, x, BB, (rnd() - 0.5) * 0.02, 0, yaw, lean)
     geos.push(t)
   }
   const mt = mesh('tagbox-tags', merge(geos), m('steel'))
