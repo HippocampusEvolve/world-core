@@ -20,3 +20,4 @@ export { hatchLid, type HatchOptions, type Hatch } from './heroes/hatch.js';
 export { porthole, type PortholeOptions, type Porthole } from './heroes/porthole.js';
 export { pod, type PodOptions, type Pod } from './heroes/pod.js';
 export { climateConsole, tarp, type ClimateConsoleOptions, type ClimateConsole, type TarpOptions, type Tarp } from './heroes/climate.js';
+export { radio, type RadioOptions, type Radio } from './heroes/radio.js';
