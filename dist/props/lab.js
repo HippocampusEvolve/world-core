@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import {} from './look.js';
 import { boxMesh, cylMesh } from './parts.js';
 import { roleMats } from './roles.js';
-import { boxGeo, frameOf, merge, mesh, pipe, place, revolve } from './shapes.js';
+import { boxGeo, extrude, frameOf, merge, mesh, pipe, place, revolve, slab } from './shapes.js';
 /** Детерминированный случай от семени (mulberry32). */
 function rng(seed) {
     let a = seed >>> 0;
@@ -288,5 +288,104 @@ export function scales({ mats } = {}) {
     g.add(weight);
     g.add(boxMesh('scales-weight-small', 0.02, 0.03, 0.01, m('steel'), 0.2, by + 0.04, bz + 0.01 + 0.005, 4));
     return { group: g, ...frameOf(g), weight };
+}
+/**
+ * Скатанный бинт диаметром 0.1 лежит на боку, с отпущенным концом. Рулон -
+ * кольцо с дыркой по оси, ось вдоль X; хвост - полоса, которая выходит
+ * из-под рулона вперёд (+Z) и лежит на столе, конец чуть загнут. Рулон
+ * стоит на собственном хвосте: низ рулона - на верху полосы. Отпущенный
+ * хвост короче 13 см: полоса площадью больше квадратного дециметра легла бы
+ * в двух миллиметрах над столом одной с ним стороной. Начало - под осью
+ * рулона на столе. Роль: cloth.
+ */
+export function bandage({ mats } = {}) {
+    const g = new THREE.Group();
+    g.name = 'bandage';
+    const m = roleMats(mats);
+    const R = 0.05;
+    const W = 0.07;
+    const RI = 0.009;
+    const c = 0.003; // скругление кромки рулона
+    const geo = revolve([
+        [[RI, -W / 2], [R - c, -W / 2]],
+        [[R - c, -W / 2], [R, -W / 2 + c], [R, W / 2 - c], [R - c, W / 2]],
+        [[R - c, W / 2], [RI, W / 2]],
+        [[RI, W / 2], [RI, -W / 2]],
+    ], 16);
+    // ось рулона - вдоль X; вершина кольца (не грань) смотрит вниз
+    geo.rotateZ(-Math.PI / 2);
+    const T = 0.0015;
+    const lift = 0.0005;
+    const roll = mesh('bandage-roll', geo, m('cloth'), 0, lift + T + R, 0);
+    g.add(roll);
+    // хвост: от-под рулона вперёд, в конце загиб кверху
+    const TW = W - 0.004;
+    const z0 = -0.02;
+    const z1 = 0.105;
+    const curl = 0.025;
+    const tail = mesh('bandage-tail', slab(2, 12, (u, v) => {
+        const x = (u - 0.5) * TW;
+        const s = v * (z1 - z0 + curl);
+        let z = z0 + s;
+        let y = lift + T / 2;
+        if (s > z1 - z0) {
+            // загиб: дуга радиусом 2.5 см кверху
+            const a = (s - (z1 - z0)) / curl;
+            z = z1 + Math.sin(a) * curl * 0.8;
+            y += (1 - Math.cos(a)) * curl * 0.8;
+        }
+        // полоса чуть гуляет поперёк
+        return [x + Math.sin(s * 40) * 0.002 * Math.max(0, s - 0.03), y, z];
+    }, T), m('cloth'));
+    g.add(tail);
+    return { group: g, ...frameOf(g), roll, tail };
+}
+/**
+ * Ножницы, закрытые, лежат плашмя: две половины - лезвие с хвостовиком и
+ * кольцо, одним куском каждая. Нижняя лежит на столе, верхняя лезвием на
+ * нижней, её кольцо - на столе рядом; винт сверху на оси. Длина 0.15, лезвия
+ * к +X. Начало - середина рамки на столе. Роль: steel.
+ */
+export function scissors({ mats } = {}) {
+    const g = new THREE.Group();
+    g.name = 'scissors';
+    const m = roleMats(mats);
+    const T = 0.0022;
+    const RR = 0.011;
+    const RT = 0.0022;
+    // половина в плане: лезвие от оси к +X, хвостовик назад и вбок к кольцу
+    const outline = [
+        [0.09, 0.0],
+        [0.086, 0.003],
+        [0.04, 0.0045],
+        [0.005, 0.0055],
+        [-0.012, 0.009],
+        [-0.036, 0.0125],
+        [-0.039, 0.0085],
+        [-0.015, 0.0035],
+        [-0.006, -0.004],
+        [0.02, -0.0055],
+        [0.07, -0.004],
+        [0.087, -0.0015],
+    ];
+    const half = (name, side, y) => {
+        const blade = extrude(side > 0 ? outline : outline.map(([x, v]) => [x, -v]), T);
+        // контур лежал в XY, выдавлен по +Z: положить плашмя, толщина вверх
+        blade.rotateX(Math.PI / 2);
+        blade.translate(0, y + T, 0);
+        const ring = new THREE.TorusGeometry(RR, RT, 5, 14);
+        ring.rotateX(Math.PI / 2);
+        ring.translate(-0.049, RT, side * 0.018);
+        return mesh(name, merge([blade, ring]), m('steel'));
+    };
+    const lower = half('scissors-lower', 1, 0);
+    const upper = half('scissors-upper', -1, T + 0.0003);
+    const screw = cylMesh('scissors-screw', 0.003, 0.003, 0.0015, 10, m('steel'), 0, 2 * T + 0.0003 + 0.00075, 0, 4);
+    g.add(lower, upper, screw);
+    const box = new THREE.Box3().setFromObject(g);
+    const cx = (box.min.x + box.max.x) / 2;
+    for (const o of [lower, upper, screw])
+        o.position.x -= cx;
+    return { group: g, ...frameOf(g) };
 }
 //# sourceMappingURL=lab.js.map

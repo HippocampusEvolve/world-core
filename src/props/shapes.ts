@@ -313,6 +313,93 @@ export function revolve(runs: (Run | ProfilePoint[])[], segments = 16, power = 2
 }
 
 /**
+ * Сечение тела по сечениям (`loft`): горизонтальный овал на высоте `y` с
+ * центром (`x`, `z`), полушириной `a` по X, полуглубиной `b` вперёд (+Z) и
+ * `back` назад (по умолчанию как вперёд). Плоская спина - малый `back`.
+ * Сечение с нулевыми `a` и `b` - полюс: к нему сходится веер.
+ */
+export type Section = { y: number; x?: number; z: number; a: number; b: number; back?: number }
+
+/**
+ * Тело по сечениям сверху вниз: плащ на крючке, мешок, сапог в разрезе.
+ *
+ * Сечения идут подряд; первое и последнее, если это не полюс, закрываются
+ * плоской крышкой веером к своему центру - тело замкнуто всегда. `warp`
+ * сдвигает точку сечения: первое число - вдоль нормали овала (складка),
+ * второе - по высоте (неровный подол); `t` - доля пути от первого сечения к
+ * последнему, `a` - угол по овалу (π/2 - перёд, −π/2 - спина).
+ */
+export function loft(
+  sections: Section[],
+  segments = 16,
+  warp?: (t: number, a: number) => [number, number],
+): THREE.BufferGeometry {
+  const pos: number[] = []
+  const uv: number[] = []
+  const idx: number[] = []
+  const n = sections.length
+  let v = 0
+  const rows: (number | number[])[] = []
+  const ring = (s: Section, i: number): number[] => {
+    const row: number[] = []
+    const t = i / (n - 1)
+    const back = s.back ?? s.b
+    for (let k = 0; k <= segments; k++) {
+      const a = (k / segments) * Math.PI * 2
+      const c = Math.cos(a)
+      const sn = Math.sin(a)
+      const bz = sn >= 0 ? s.b : back
+      let x = (s.x ?? 0) + s.a * c
+      let z = s.z + bz * sn
+      let y = s.y
+      if (warp) {
+        const [dn, dy] = warp(t, a)
+        // нормаль овала в плоскости сечения
+        const nx = c / Math.max(s.a, 1e-6)
+        const nz = sn / Math.max(bz, 1e-6)
+        const l = Math.hypot(nx, nz) || 1
+        x += (nx / l) * dn
+        z += (nz / l) * dn
+        y += dy
+      }
+      row.push(pos.length / 3)
+      pos.push(x, y, z)
+      uv.push(a * (s.a + (s.b + back) / 2) * 0.5, v)
+    }
+    return row
+  }
+  const pole = (s: Section) => {
+    const i = pos.length / 3
+    pos.push(s.x ?? 0, s.y, s.z)
+    uv.push(0, v)
+    return i
+  }
+  sections.forEach((s, i) => {
+    if (i > 0) v += Math.abs(s.y - sections[i - 1].y)
+    const isPole = s.a < 1e-7 && s.b < 1e-7
+    if (isPole) {
+      rows.push(pole(s))
+      return
+    }
+    // крышка у открытого конца: свой центр в плоскости сечения
+    if (i === 0) rows.push(pole(s))
+    rows.push(ring(s, i))
+    if (i === n - 1) rows.push(pole(s))
+  })
+  for (let j = 0; j < rows.length - 1; j++) {
+    const A = rows[j]
+    const B = rows[j + 1]
+    for (let k = 0; k < segments; k++) {
+      if (typeof A === 'number' && typeof B === 'number') continue
+      if (typeof A === 'number') idx.push(A, (B as number[])[k + 1], (B as number[])[k])
+      else if (typeof B === 'number') idx.push(A[k], A[k + 1], B)
+      else idx.push(A[k], A[k + 1], B[k + 1], A[k], B[k + 1], B[k])
+    }
+  }
+  return shade(build(pos, uv, idx), Math.PI / 4)
+}
+
+/**
  * Тонкое полотно толщиной `t` по поверхности `f(u, v)`, u и v от 0 до 1:
  * плащ, простыня на зеркале, хвост бинта. Лицевая и изнаночная стороны
  * сдвинуты от поверхности по нормали на полтолщины, по краю - кромка, так

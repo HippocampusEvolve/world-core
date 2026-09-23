@@ -98,4 +98,32 @@ export type Scales = Sized & {
  * Роли: paint, rubber, steel.
  */
 export declare function scales({ mats }?: ScalesOptions): Scales;
+export type BandageOptions = {
+    mats?: Mats;
+};
+export type Bandage = Sized & {
+    roll: THREE.Mesh;
+    tail: THREE.Mesh;
+};
+/**
+ * Скатанный бинт диаметром 0.1 лежит на боку, с отпущенным концом. Рулон -
+ * кольцо с дыркой по оси, ось вдоль X; хвост - полоса, которая выходит
+ * из-под рулона вперёд (+Z) и лежит на столе, конец чуть загнут. Рулон
+ * стоит на собственном хвосте: низ рулона - на верху полосы. Отпущенный
+ * хвост короче 13 см: полоса площадью больше квадратного дециметра легла бы
+ * в двух миллиметрах над столом одной с ним стороной. Начало - под осью
+ * рулона на столе. Роль: cloth.
+ */
+export declare function bandage({ mats }?: BandageOptions): Bandage;
+export type ScissorsOptions = {
+    mats?: Mats;
+};
+export type Scissors = Sized;
+/**
+ * Ножницы, закрытые, лежат плашмя: две половины - лезвие с хвостовиком и
+ * кольцо, одним куском каждая. Нижняя лежит на столе, верхняя лезвием на
+ * нижней, её кольцо - на столе рядом; винт сверху на оси. Длина 0.15, лезвия
+ * к +X. Начало - середина рамки на столе. Роль: steel.
+ */
+export declare function scissors({ mats }?: ScissorsOptions): Scissors;
 export {};

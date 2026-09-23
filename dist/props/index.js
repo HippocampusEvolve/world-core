@@ -34,4 +34,8 @@ export { locker, medCabinet, panelBox, jerrycan, bucket, } from './storage.js';
 export { coatBoard, coveredMirror, extinguisher, cableTray, washbasin, wallClock, photoFrame, nightLamp, } from './fixtures.js';
 export { bunk, cot, rolledMattress, foldedCot, } from './beds.js';
 export { plantRack, tomatoPlant, jar, microscope, tagBox, scales, } from './lab.js';
+export { coat, boots } from './cloth.js';
+export { bandage, scissors } from './lab.js';
+export { mug, sugarBowl, cupShelf, } from './tableware.js';
+export { openBook, pen } from './stationery.js';
 //# sourceMappingURL=index.js.map

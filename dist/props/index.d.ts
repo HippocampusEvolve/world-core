@@ -33,3 +33,7 @@ export { locker, medCabinet, panelBox, jerrycan, bucket, type LockerOptions, typ
 export { coatBoard, coveredMirror, extinguisher, cableTray, washbasin, wallClock, photoFrame, nightLamp, type CoatBoardOptions, type CoatBoard, type CoveredMirrorOptions, type CoveredMirror, type ExtinguisherOptions, type Extinguisher, type CableTrayOptions, type CableTray, type WashbasinOptions, type Washbasin, type WallClockOptions, type WallClock, type PhotoFrameOptions, type PhotoFrame, type NightLampOptions, type NightLamp, } from './fixtures.js';
 export { bunk, cot, rolledMattress, foldedCot, type BunkOptions, type Bunk, type CotOptions, type Cot, type RolledMattressOptions, type RolledMattress, type FoldedCotOptions, type FoldedCot, } from './beds.js';
 export { plantRack, tomatoPlant, jar, microscope, tagBox, scales, type PlantRackOptions, type PlantRack, type TomatoPlantOptions, type TomatoPlant, type JarOptions, type Jar, type MicroscopeOptions, type Microscope, type TagBoxOptions, type TagBox, type ScalesOptions, type Scales, } from './lab.js';
+export { coat, boots, type CoatOptions, type Coat, type BootsOptions, type Boots } from './cloth.js';
+export { bandage, scissors, type BandageOptions, type Bandage, type ScissorsOptions, type Scissors } from './lab.js';
+export { mug, sugarBowl, cupShelf, type MugOptions, type Mug, type SugarBowlOptions, type SugarBowl, type CupShelfOptions, type CupShelf, } from './tableware.js';
+export { openBook, pen, type OpenBookOptions, type OpenBook, type PenOptions, type Pen } from './stationery.js';

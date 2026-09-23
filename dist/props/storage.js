@@ -12,7 +12,7 @@ import {} from './look.js';
 import { boxMesh, cylMesh } from './parts.js';
 import { roleMats } from './roles.js';
 import { carcass, GAP, HANDLE_OUT } from './cabinet.js';
-import { extrude, fillet, frameOf, mesh, merge, boxGeo, pipe, revolve } from './shapes.js';
+import { extrude, fillet, frameOf, mesh, merge, boxGeo, pipe, place, revolve } from './shapes.js';
 const OPEN = (100 * Math.PI) / 180;
 /**
  * Стальной шкафчик на цоколе: дверца на левой петле с жалюзи вверху и внизу,
@@ -43,12 +43,16 @@ export function locker({ w = 0.5, d = 0.5, h = 1.8, open = false, sealed = false
     const door = c.doors[0];
     const wi = w - 2 * T;
     const dw = wi - 2 * GAP;
-    // жалюзи: прорези-козырьки на лице дверцы, отступ 2 мм
+    // жалюзи: козырьки на лице дверцы, отступ 2 мм. Козырёк наклонён: плоская
+    // планка лицом параллельно дверце легла бы в 6 мм перед ней одной стороной,
+    // а у пяти шкафчиков в ряд такие планки складываются в одну спорную полосу
     const doorH = h - T - (0.06 + T) - 2 * GAP;
     const louvre = [];
+    const tilt = 0.5;
+    const reachZ = 0.002 * Math.cos(tilt) + 0.004 * Math.sin(tilt); // от середины планки до её дальнего угла по Z
     for (const y of [doorH / 2 - 0.12, -doorH / 2 + 0.1]) {
         for (let i = 0; i < 3; i++)
-            louvre.push(boxGeo(0.14, 0.008, 0.004, GAP + dw / 2, y - i * 0.022, 0.004));
+            louvre.push(place(boxGeo(0.14, 0.008, 0.004), GAP + dw / 2, y - i * 0.022, 0.002 + reachZ, -tilt));
     }
     door.add(mesh('locker-louvre', merge(louvre), m('paint')));
     // полка под шапку и штанга под ней, между боковинами

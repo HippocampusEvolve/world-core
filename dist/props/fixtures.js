@@ -33,14 +33,23 @@ export function coatBoard({ hooks = 5, w = 1.3, mats } = {}) {
     const step = hooks > 1 ? (w - 0.2) / (hooks - 1) : 0;
     for (let i = 0; i < hooks; i++) {
         const x = hooks > 1 ? -w / 2 + 0.1 + i * step : 0;
-        g.add(boxMesh('coat-board-rosette', 0.022, 0.05, 0.004, m('steel'), x, -0.03, BT + 0.002, 4));
+        // круглая розетка под крючком: лицо в 4 мм перед доской, но площадью с
+        // монету - пять штук вместе меньше квадратного дециметра
+        const ros = cylMesh('coat-board-rosette', 0.012, 0.012, 0.004, 8, m('steel'), x, -0.03, BT + 0.002, 4);
+        ros.rotation.x = Math.PI / 2;
+        g.add(ros);
+        // первый отрезок - по нормали к розетке: торец прутка ложится на неё плашмя
         const path = [
             [x, -0.03, BT + 0.004],
+            [x, -0.03, BT + 0.012],
             [x, -0.045, 0.068],
             [x, -0.015, 0.082],
         ];
-        g.add(mesh('coat-board-hook', pipe(fillet(path, 0.012, 3), r, 6), m('steel')));
-        points.push(new THREE.Vector3(x, -0.045 + r * 0.5, 0.066));
+        const bent = fillet(path, 0.012, 3, [2]);
+        g.add(mesh('coat-board-hook', pipe(bent, r, 6), m('steel')));
+        // петля ложится в колено - на верх прутка в самой низкой точке его оси
+        const knee = bent.reduce((lo, p) => (p[1] < lo[1] ? p : lo));
+        points.push(new THREE.Vector3(x, knee[1] + r, knee[2]));
         labels.push(new THREE.Vector3(x, 0.035, BT));
     }
     return { group: g, ...frameOf(g), hooks: points, labels };
