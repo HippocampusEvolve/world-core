@@ -21,4 +21,5 @@ export { porthole } from './heroes/porthole.js';
 export { pod } from './heroes/pod.js';
 export { climateConsole, tarp } from './heroes/climate.js';
 export { radio } from './heroes/radio.js';
+export { pump } from './heroes/pump.js';
 //# sourceMappingURL=heroes.js.map

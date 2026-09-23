@@ -21,3 +21,4 @@ export { porthole, type PortholeOptions, type Porthole } from './heroes/porthole
 export { pod, type PodOptions, type Pod } from './heroes/pod.js';
 export { climateConsole, tarp, type ClimateConsoleOptions, type ClimateConsole, type TarpOptions, type Tarp } from './heroes/climate.js';
 export { radio, type RadioOptions, type Radio } from './heroes/radio.js';
+export { pump, type PumpOptions, type Pump } from './heroes/pump.js';
