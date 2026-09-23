@@ -156,3 +156,4 @@ export {
   type CupShelf,
 } from './tableware.js'
 export { openBook, pen, type OpenBookOptions, type OpenBook, type PenOptions, type Pen } from './stationery.js'
+export * from './heroes.js'

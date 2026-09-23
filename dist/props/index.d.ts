@@ -37,3 +37,4 @@ export { coat, boots, type CoatOptions, type Coat, type BootsOptions, type Boots
 export { bandage, scissors, type BandageOptions, type Bandage, type ScissorsOptions, type Scissors } from './lab.js';
 export { mug, sugarBowl, cupShelf, type MugOptions, type Mug, type SugarBowlOptions, type SugarBowl, type CupShelfOptions, type CupShelf, } from './tableware.js';
 export { openBook, pen, type OpenBookOptions, type OpenBook, type PenOptions, type Pen } from './stationery.js';
+export * from './heroes.js';

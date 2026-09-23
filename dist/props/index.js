@@ -38,4 +38,5 @@ export { coat, boots } from './cloth.js';
 export { bandage, scissors } from './lab.js';
 export { mug, sugarBowl, cupShelf, } from './tableware.js';
 export { openBook, pen } from './stationery.js';
+export * from './heroes.js';
 //# sourceMappingURL=index.js.map
